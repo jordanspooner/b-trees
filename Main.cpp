@@ -9,34 +9,72 @@ using namespace std;
 template <size_t N, typename T> ostream& operator<<(ostream& o, BTree<N, T> const& v);
 
 template <size_t NodeSize> void testBTreeWithNodeSize() {
-	(cout << "Node size " << NodeSize).flush();
-	BTree<NodeSize> b(400L);
-	long input[1024];
-	size_t i{};
-	for(auto& it : input) {
-		if(i % 25 == 0)
-			i++;
-		it = i++;
+	BTree<NodeSize> b(34);
+	b.insert(13);
+	b.insert(15);
+	b.insert(11);
+	b.insert(22);
+	b.insert(1);
+	b.insert(38);
+	b.insert(28);
+	b.insert(6);
+	b.insert(9);
+	b.insert(32);
+	b.insert(8);
+	b.insert(40);
+	b.insert(37);
+	b.insert(3);
+	b.insert(16);
+	b.insert(49);
+	b.insert(44);
+	b.insert(39);
+	b.insert(19);
+	b.insert(50);
+	b.insert(17);
+	b.insert(36);
+	b.insert(20);
+	b.insert(30);
+	b.insert(4);
+	b.insert(35);
+	b.insert(48);
+	b.insert(12);
+	b.insert(2);
+	b.insert(14);
+	b.insert(7);
+	b.insert(46);
+	b.insert(27);
+	b.insert(47);
+	b.insert(23);
+	b.insert(10);
+	b.insert(43);
+	b.insert(42);
+	b.insert(29);
+	b.insert(24);
+	b.insert(31);
+	b.insert(21);
+	b.insert(33);
+	b.insert(26);
+	b.insert(25);
+	b.insert(41);
+	b.insert(5);
+	b.insert(18);
+	b.insert(45);
+	cout << "*** NodeSize: " << NodeSize << " ***" << endl;
+	for (long i = 1; i < 50; i++) {
+		if (b.count(i) != 1) cerr << "Didn't find " << i << " but it should be there!" << endl;
 	}
-	std::random_device rd;
-	std::mt19937 g(rd());
-	std::shuffle(begin(input), end(input), g);
-	for(auto& it : input) {
-		b.insert(it);
-		if(b.count(it) != 1) {
-			stringstream error;
-			error << it << " got lost in tree: " << b << endl;
-			throw runtime_error(error.str());
-		}
+	if (b.count(0) != 0) cerr << "Found " << 0 << " but it shouldn't be there!" << endl;
+	if (b.count(51) != 0) cerr << "Found " << 51 << " but it shouldn't be there!" << endl;
+	if (NodeSize == 4) {
+		cout << "It should look like:    [[[[1], 2, [3, 4, 5], 6, [7, 8], 9, [10, 11, 12]], 13, [[14, 15], 16, [17, 18], 19, [20, 21]]], 22, [[[23], 24, [25, 26], 27, [28], 29, [30, 31]], 32, [[33], 34, [35, 36], 37, [38, 39]], 40, [[41, 42, 43], 44, [45, 46, 47], 48, [49, 50]]]]" << endl;
 	}
-	for(size_t shouldNotBePresent = 0; shouldNotBePresent < 1024; shouldNotBePresent += 25) {
-		if(shouldNotBePresent != 400 && b.count(shouldNotBePresent)) {
-			stringstream error;
-			error << shouldNotBePresent << " somehow ended up in the tree: " << b << endl;
-			throw runtime_error(error.str());
-		}
+	if (NodeSize == 5) {
+		cout << "It should look like:    [[[1, 2, 3], 4, [5, 6, 7, 8], 9, [10, 11], 12, [13, 14]], 15, [[16, 17, 18], 19, [20, 21], 22, [23, 24, 25, 26], 27, [28, 29, 30, 31]], 32, [[33, 34], 35, [36, 37], 38, [39, 40]], 41, [[42, 43], 44, [45, 46, 47], 48, [49, 50]]]" << endl;
 	}
-	cout << ": success" << endl;
+	if (NodeSize == 6) {
+		cout << "It should look like:    [[[1, 2, 3, 4, 5], 6, [7, 8], 9, [10, 11, 12], 13, [14, 15, 16]], 17, [[18, 19, 20, 21], 22, [23, 24, 25, 26, 27], 28, [29, 30, 31]], 32, [[33, 34, 35, 36], 37, [38, 39], 40, [41, 42], 43, [44, 45, 46], 47, [48, 49, 50]]]" << endl;
+	}
+	cout << "Your tree looks like:   " << b << endl;
 }
 
 int main() {

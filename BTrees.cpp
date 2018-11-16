@@ -90,6 +90,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Clear the node at an index and the child to the right of that index.
+	 *
 	 * The pivot value is reset and the child to its right is set to NULL.
 	 * @param index The index, between 0 and `NodeSize - 1` (inclusive), to clear.
 	 */
@@ -115,8 +116,9 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	}
 
 	/**
-	 * Copy all NodeElements from the index @param index to `NodeSize - 2` (inclusive) to a new node.
-	 * Also clears the copied values from the original node (this).
+	 * Copy everything after (and including) the index @param index to a new node.
+	 *
+	 * Also clear the copied values from the original node (this).
 	 * @param index The node from which elements should be copied from the end.
 	 * @return A new node, with all copied elements at the beginning.
 	 */
@@ -132,22 +134,33 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 		return newNode;
 	}
 
-	NewSplit insertIntoNonFullNode(size_t index, T valueToInsert) {
+	/**
+	 * Insert a pivot, with a possible right child, into a non-full node, in the correct position.
+	 * @param index The index where the value should be inserted.
+	 * @param pivotToInsert The pivot to insert. (Right child is optional).
+	 * @return An empty struct. (To signify that no split has occurred, and no value needs to be passed up).
+	 */
+	NewSplit insertIntoNonFullNode(size_t index, NewSplit pivotToInsert) {
 		child(NodeSize - 1) = child(NodeSize - 2);
 		for (size_t i = NodeSize - 2; i > index; i--) {
 			pivots[i] = pivots[i - 1];
 		}
-		pivot(index) = valueToInsert;
+		pivot(index) = pivotToInsert.newPivot;
+		if (pivotToInsert.childToTheRightOfPivot) child(index + 1) = pivotToInsert.childToTheRightOfPivot;
 		return {};
 	}
 
-	NewSplit insertIntoNonFullNode(size_t index, NewSplit newSplit) {
-		insertIntoNonFullNode(index, newSplit.newPivot);
-		child(index + 1) = newSplit.childToTheRightOfPivot;
-		return {};
-	}
-
-	NewSplit insertIntoFullNode(size_t index, T valueToInsert) {
+	/**
+	 * Insert a pivot, with possible right child, into a full node, in the correct position,
+	 * returning a `NewSplit` struct that gets passed upwards.
+	 *
+	 * We always choose the actual median here as the pivot, which is a little more complex
+	 * but produces nicer trees. :)
+	 * @param index The index where the pivot value should be inserted.
+	 * @param pivotToInsert The pivot to insert. (Right child is optional).
+	 * @return A new pivot and right child to be inserted above this. (This becomes the left child).
+	 */
+	NewSplit insertIntoFullNode(size_t index, NewSplit pivotToInsert) {
 		T newPivot;
 		BTreeNode<NodeSize, T>* newRightChild;
 
@@ -157,55 +170,27 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 			newPivot = pivot(middle - 1).value();
 			newRightChild = moveToNewNode(middle);
 			clear(middle - 1);
-			insertIntoNonFullNode(index, valueToInsert);
+			insertIntoNonFullNode(index, pivotToInsert);
 		} else if (index == middle) {
 			// Case 2: inserted value is the median.
-			newPivot = valueToInsert;
+			newPivot = pivotToInsert.newPivot;
 			newRightChild = moveToNewNode(middle);
+			if (pivotToInsert.childToTheRightOfPivot) newRightChild->child(0) = pivotToInsert.childToTheRightOfPivot;
 		} else {
 			// Case 3: inserted value is to the right of the median.
 			newPivot = pivot(middle).value();
 			newRightChild = moveToNewNode(middle + 1);
 			clear(middle);
-			newRightChild->insertIntoNonFullNode(index - middle - 1, valueToInsert);
-		}
-
-		return {newPivot, newRightChild};
-	}
-
-	NewSplit insertIntoFullNode(size_t index, NewSplit split) {
-		T newPivot;
-		BTreeNode<NodeSize, T>* newRightChild;
-
-		size_t middle = (NodeSize - 1) / 2;
-		if (index < middle) {
-			// Case 1: inserted value is to the left of the median.
-			newPivot = pivot(middle - 1).value();
-			newRightChild = moveToNewNode(middle);
-			pivot(middle - 1).reset();
-			child(middle) = nullptr;
-			insertIntoNonFullNode(index, split);
-		} else if (index == middle) {
-			// Case 2: inserted value is the median.
-			newPivot = split.newPivot;
-			newRightChild = moveToNewNode(middle);
-			newRightChild->child(0) = split.childToTheRightOfPivot;
-		} else {
-			// Case 3: inserted value is to the right of the median.
-			newPivot = pivot(middle).value();
-			newRightChild = moveToNewNode(middle + 1);
-			pivot(middle).reset();
-			child(middle + 1) = nullptr;
-			newRightChild->insertIntoNonFullNode(index - middle - 1, split);
+			newRightChild->insertIntoNonFullNode(index - middle - 1, pivotToInsert);
 		}
 
 		return {newPivot, newRightChild};
 	}
 
 	/**
-	 *s
-	 * @param valueToInsert
-	 * @return
+	 * Insert a value into this node, or one of its children.
+	 * @param valueToInsert The value to be inserted.
+	 * @return A struct that contains a value and right child to be passed upwards, if a split has occurred.
 	 */
 	NewSplit insert(T valueToInsert) {
 		size_t index = 0;
@@ -214,9 +199,9 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 		if (isLeaf()) {
 			if (!isFull()) {
-				return insertIntoNonFullNode(index, valueToInsert);
+				return insertIntoNonFullNode(index, {valueToInsert});
 			}
-			return insertIntoFullNode(index, valueToInsert);
+			return insertIntoFullNode(index, {valueToInsert});
 		}
 
 		NewSplit newSplit = child(index)->insert(valueToInsert);
@@ -229,6 +214,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Count the number of occurrences of a value.
+	 *
 	 * We assume uniqueness of values, thus this function returns either 0 of 1.
 	 * @param valueToFind The pivot/key value to check for.
 	 * @return 1 if present, 0 otherwise.
