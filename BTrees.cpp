@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdlib>
 #include <utility>
 #include <iostream>
@@ -58,41 +59,191 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	////////////////////////////////////////////////////////////////////////////////
 
 	/**
-	 * This is a convenience function that Holger used to implement this,
-	 * feel free to ignore it and implement your own structure
+	 * Work out whether a pivot exists at an index.
+	 * @param index The index to check.
+	 * @return Whether a pivot is present.
 	 */
-	NewSplit splitNode(T first, BTreeNode<NodeSize, T>* newChild) {
-		// you may or may not implement this function
-		return {};
+	 bool pivotIsPresent(size_t index) {
+		return index < NodeSize - 1 && pivot(index).has_value();
 	}
 
 	/**
-	 * This is a convenience function that Holger used to implement this,
-	 * feel free to ignore it and implement your own structure
+	 * Work out value at a pivot.
+	 * @param index The index, between `0` and `NodeSize - 2` (inclusive), to check.
+	 * @return The value at the pivot (pivot must be present).
 	 */
-	NewSplit mergeValueIntoNode(T first, BTreeNode<NodeSize, T>* second, bool isLeaf = false) {
-		// you may or may not implement this function
-		return {};
+	optional<T>& pivot(size_t index) {
+		assert(index >= 0 && index < NodeSize - 1);
+		return pivots[index].pivot;
 	}
 
 	/**
-	 * Inserts the value into the Node (or any of it children)
-	 *
-	 * !!!!! You *must* implement this function !!!!!
-	 *
-	 * If the node was split, returns a new pivot and a new right child
+	 * Work out the child at an index.
+	 * @param index The index, between `0` and `NodeSize - 1` (inclusive), to check.
+	 * @return The child at this index (should be `nullptr` if no such child exists).
 	 */
-	NewSplit insert(T v) { return {}; }
+	BTreeNode<NodeSize, T>*& child(size_t index) {
+	 	assert(index >= 0 && index < NodeSize);
+	 	if (index == NodeSize - 1) return rightMost;
+		return pivots[index].childToLeft;
+	}
 
 	/**
-	 * Count the number of occurences of the value v
-	 *
-	 * !!!!! You *must* implement this function !!!!!
-	 *
-	 * You can assume uniqueness of the values v, thus this function
-	 * returns either 0 of 1
+	 * Clear the node at an index and the child to the right of that index.
+	 * The pivot value is reset and the child to its right is set to NULL.
+	 * @param index The index, between 0 and `NodeSize - 1` (inclusive), to clear.
 	 */
-	size_t count(T v) { return {}; }
+	void clear(size_t index) {
+		pivot(index).reset();
+		child(index + 1) = nullptr;
+	}
+
+	/**
+	 * Work out if this node needs to be split before inserting a new key.
+	 * @return Whether this BTreeNode is full (any addition will require a split).
+	 */
+	bool isFull() {
+		return pivotIsPresent(NodeSize - 2);
+	}
+
+	/**
+	 * Work out whether this node is a leaf.
+	 * @return Whether this BTreeNode is a leaf (has any children).
+	 */
+	bool isLeaf() {
+		return child(0) == nullptr;
+	}
+
+	/**
+	 * Copy all NodeElements from the index @param index to `NodeSize - 2` (inclusive) to a new node.
+	 * Also clears the copied values from the original node (this).
+	 * @param index The node from which elements should be copied from the end.
+	 * @return A new node, with all copied elements at the beginning.
+	 */
+	BTreeNode<NodeSize, T>* moveToNewNode(size_t index) {
+		auto* newNode = new BTreeNode<NodeSize, T>();
+		// Copy to new node.
+		for (size_t i = index; i < NodeSize - 1; i++) {
+			newNode->pivots[i - index] = pivots[i];
+		}
+		newNode->child(NodeSize - 1 - index) = child(NodeSize - 1);
+		// Clear from old node.
+		for (size_t i = index; i < NodeSize - 1; i++) clear(i);
+		return newNode;
+	}
+
+	NewSplit insertIntoNonFullNode(size_t index, T valueToInsert) {
+		child(NodeSize - 1) = child(NodeSize - 2);
+		for (size_t i = NodeSize - 2; i > index; i--) {
+			pivots[i] = pivots[i - 1];
+		}
+		pivot(index) = valueToInsert;
+		return {};
+	}
+
+	NewSplit insertIntoNonFullNode(size_t index, NewSplit newSplit) {
+		insertIntoNonFullNode(index, newSplit.newPivot);
+		child(index + 1) = newSplit.childToTheRightOfPivot;
+		return {};
+	}
+
+	NewSplit insertIntoFullNode(size_t index, T valueToInsert) {
+		T newPivot;
+		BTreeNode<NodeSize, T>* newRightChild;
+
+		size_t middle = (NodeSize - 1) / 2;
+		if (index < middle) {
+			// Case 1: inserted value is to the left of the median.
+			newPivot = pivot(middle - 1).value();
+			newRightChild = moveToNewNode(middle);
+			clear(middle - 1);
+			insertIntoNonFullNode(index, valueToInsert);
+		} else if (index == middle) {
+			// Case 2: inserted value is the median.
+			newPivot = valueToInsert;
+			newRightChild = moveToNewNode(middle);
+		} else {
+			// Case 3: inserted value is to the right of the median.
+			newPivot = pivot(middle).value();
+			newRightChild = moveToNewNode(middle + 1);
+			clear(middle);
+			newRightChild->insertIntoNonFullNode(index - middle - 1, valueToInsert);
+		}
+
+		return {newPivot, newRightChild};
+	}
+
+	NewSplit insertIntoFullNode(size_t index, NewSplit split) {
+		T newPivot;
+		BTreeNode<NodeSize, T>* newRightChild;
+
+		size_t middle = (NodeSize - 1) / 2;
+		if (index < middle) {
+			// Case 1: inserted value is to the left of the median.
+			newPivot = pivot(middle - 1).value();
+			newRightChild = moveToNewNode(middle);
+			pivot(middle - 1).reset();
+			child(middle) = nullptr;
+			insertIntoNonFullNode(index, split);
+		} else if (index == middle) {
+			// Case 2: inserted value is the median.
+			newPivot = split.newPivot;
+			newRightChild = moveToNewNode(middle);
+			newRightChild->child(0) = split.childToTheRightOfPivot;
+		} else {
+			// Case 3: inserted value is to the right of the median.
+			newPivot = pivot(middle).value();
+			newRightChild = moveToNewNode(middle + 1);
+			pivot(middle).reset();
+			child(middle + 1) = nullptr;
+			newRightChild->insertIntoNonFullNode(index - middle - 1, split);
+		}
+
+		return {newPivot, newRightChild};
+	}
+
+	/**
+	 *s
+	 * @param valueToInsert
+	 * @return
+	 */
+	NewSplit insert(T valueToInsert) {
+		size_t index = 0;
+		while (pivotIsPresent(index) && valueToInsert > pivot(index).value())
+			index++;
+
+		if (isLeaf()) {
+			if (!isFull()) {
+				return insertIntoNonFullNode(index, valueToInsert);
+			}
+			return insertIntoFullNode(index, valueToInsert);
+		}
+
+		NewSplit newSplit = child(index)->insert(valueToInsert);
+		if (newSplit.childToTheRightOfPivot == nullptr) return {};
+		if (!isFull()) {
+			return insertIntoNonFullNode(index, newSplit);
+		}
+		return insertIntoFullNode(index, newSplit);
+	}
+
+	/**
+	 * Count the number of occurrences of a value.
+	 * We assume uniqueness of values, thus this function returns either 0 of 1.
+	 * @param valueToFind The pivot/key value to check for.
+	 * @return 1 if present, 0 otherwise.
+	 */
+	size_t count(T valueToFind) {
+		size_t index = 0;
+		while (pivotIsPresent(index) && valueToFind > pivot(index).value())
+			index++;
+		if (pivotIsPresent(index) && valueToFind == pivot(index).value())
+			return 1;
+		else if (isLeaf())
+			return 0;
+		else
+			return child(index)->count(valueToFind);
+	}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,6 +295,8 @@ ostream& operator<<(ostream& o, BTree<NodeSize, T> const& v) {
 	return o << *v.root << endl;
 }
 
+template class BTree<3>;
+template ostream& operator<<(ostream& o, BTree<3, long> const& v);
 template class BTree<4>;
 template ostream& operator<<(ostream& o, BTree<4, long> const& v);
 template class BTree<5>;

@@ -11,7 +11,6 @@ template <size_t N, typename T> ostream& operator<<(ostream& o, BTree<N, T> cons
 template <size_t NodeSize> void testBTreeWithNodeSize() {
 	(cout << "Node size " << NodeSize).flush();
 	BTree<NodeSize> b(400L);
-
 	long input[1024];
 	size_t i{};
 	for(auto& it : input) {
