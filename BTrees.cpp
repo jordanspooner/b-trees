@@ -60,6 +60,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Work out whether a pivot exists at an index.
+	 *
 	 * @param index The index to check.
 	 * @return Whether a pivot is present.
 	 */
@@ -69,6 +70,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Work out value at a pivot.
+	 *
 	 * @param index The index, between `0` and `NodeSize - 2` (inclusive), to check.
 	 * @return The value at the pivot (pivot must be present).
 	 */
@@ -79,6 +81,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Work out the child at an index.
+	 *
 	 * @param index The index, between `0` and `NodeSize - 1` (inclusive), to check.
 	 * @return The child at this index (should be `nullptr` if no such child exists).
 	 */
@@ -92,6 +95,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 * Clear the node at an index and the child to the right of that index.
 	 *
 	 * The pivot value is reset and the child to its right is set to NULL.
+	 *
 	 * @param index The index, between 0 and `NodeSize - 1` (inclusive), to clear.
 	 */
 	void clear(size_t index) {
@@ -101,6 +105,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Work out if this node needs to be split before inserting a new key.
+	 *
 	 * @return Whether this BTreeNode is full (any addition will require a split).
 	 */
 	bool isFull() {
@@ -109,6 +114,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Work out whether this node is a leaf.
+	 *
 	 * @return Whether this BTreeNode is a leaf (has any children).
 	 */
 	bool isLeaf() {
@@ -119,6 +125,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 * Copy everything after (and including) the index @param index to a new node.
 	 *
 	 * Also clear the copied values from the original node (this).
+	 *
 	 * @param index The node from which elements should be copied from the end.
 	 * @return A new node, with all copied elements at the beginning.
 	 */
@@ -136,6 +143,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Insert a pivot, with a possible right child, into a non-full node, in the correct position.
+	 *
 	 * @param index The index where the value should be inserted.
 	 * @param pivotToInsert The pivot to insert. (Right child is optional).
 	 * @return An empty struct. (To signify that no split has occurred, and no value needs to be passed up).
@@ -157,6 +165,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 *
 	 * We always choose the actual median here as the pivot, which is a little more complex
 	 * but produces nicer trees. :)
+	 *
 	 * @param index The index where the pivot value should be inserted.
 	 * @param pivotToInsert The pivot to insert. (Right child is optional).
 	 * @return A new pivot and right child to be inserted above this. (This becomes the left child).
@@ -191,6 +200,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 
 	/**
 	 * Insert a value into this node, or one of its children.
+	 *
 	 * @param valueToInsert The value to be inserted.
 	 * @return A struct that contains a value and right child to be passed upwards, if a split has occurred.
 	 */
@@ -218,6 +228,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 * Count the number of occurrences of a value.
 	 *
 	 * We assume uniqueness of values, thus this function returns either 0 of 1.
+	 *
 	 * @param valueToFind The pivot/key value to check for.
 	 * @return 1 if present, 0 otherwise.
 	 */
