@@ -87,7 +87,8 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 */
 	BTreeNode<NodeSize, T>*& child(size_t index) {
 	 	assert(index >= 0 && index < NodeSize);
-	 	if (index == NodeSize - 1) return rightMost;
+	 	if (index == NodeSize - 1)
+	 	    return rightMost;
 		return pivots[index].childToLeft;
 	}
 
@@ -132,12 +133,12 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	BTreeNode<NodeSize, T>* moveToNewNode(size_t index) {
 		auto* newNode = new BTreeNode<NodeSize, T>();
 		// Copy to new node.
-		for (size_t i = index; i < NodeSize - 1; i++) {
+		for (size_t i = index; i < NodeSize - 1; i++)
 			newNode->pivots[i - index] = pivots[i];
-		}
 		newNode->child(NodeSize - 1 - index) = child(NodeSize - 1);
 		// Clear from old node.
-		for (size_t i = index; i < NodeSize - 1; i++) clear(i);
+		for (size_t i = index; i < NodeSize - 1; i++)
+		    clear(i);
 		return newNode;
 	}
 
@@ -150,9 +151,8 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 */
 	NewSplit insertIntoNonFullNode(size_t index, NewSplit pivotToInsert) {
 		child(NodeSize - 1) = child(NodeSize - 2);
-		for (size_t i = NodeSize - 2; i > index; i--) {
+		for (size_t i = NodeSize - 2; i > index; i--)
 			pivots[i] = pivots[i - 1];
-		}
 		pivot(index) = pivotToInsert.newPivot;
 		if (pivotToInsert.childToTheRightOfPivot)
 			child(index + 1) = pivotToInsert.childToTheRightOfPivot;
@@ -209,18 +209,19 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 		while (pivotIsPresent(index) && valueToInsert > pivot(index).value())
 			index++;
 
+		// Case 1: Leaf node: Insertion happens here.
 		if (isLeaf()) {
-			if (!isFull()) {
-				return insertIntoNonFullNode(index, {valueToInsert});
-			}
+			if (!isFull())
+			    return insertIntoNonFullNode(index, {valueToInsert});
 			return insertIntoFullNode(index, {valueToInsert});
 		}
 
+		// Case 2: Non-leaf node: Insert recursively and deal with any splits passed back up.
 		NewSplit newSplit = child(index)->insert(valueToInsert);
-		if (newSplit.childToTheRightOfPivot == nullptr) return {};
-		if (!isFull()) {
-			return insertIntoNonFullNode(index, newSplit);
-		}
+		if (newSplit.childToTheRightOfPivot == nullptr)
+		    return {};
+		if (!isFull())
+		    return insertIntoNonFullNode(index, newSplit);
 		return insertIntoFullNode(index, newSplit);
 	}
 
