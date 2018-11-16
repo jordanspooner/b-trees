@@ -146,7 +146,8 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 			pivots[i] = pivots[i - 1];
 		}
 		pivot(index) = pivotToInsert.newPivot;
-		if (pivotToInsert.childToTheRightOfPivot) child(index + 1) = pivotToInsert.childToTheRightOfPivot;
+		if (pivotToInsert.childToTheRightOfPivot)
+			child(index + 1) = pivotToInsert.childToTheRightOfPivot;
 		return {};
 	}
 
@@ -175,7 +176,8 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 			// Case 2: inserted value is the median.
 			newPivot = pivotToInsert.newPivot;
 			newRightChild = moveToNewNode(middle);
-			if (pivotToInsert.childToTheRightOfPivot) newRightChild->child(0) = pivotToInsert.childToTheRightOfPivot;
+			if (pivotToInsert.childToTheRightOfPivot)
+				newRightChild->child(0) = pivotToInsert.childToTheRightOfPivot;
 		} else {
 			// Case 3: inserted value is to the right of the median.
 			newPivot = pivot(middle).value();
