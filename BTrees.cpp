@@ -163,7 +163,7 @@ template <size_t NodeSize, typename T> struct BTreeNode {
 	 * Insert a pivot, with possible right child, into a full node, in the correct position,
 	 * returning a `NewSplit` struct that gets passed upwards.
 	 *
-	 * We always choose the actual median here as the pivot, which is a little more complex
+	 * We always choose the actual median here as the new pivot, which is a little more complex
 	 * but produces nicer trees. :)
 	 *
 	 * @param index The index where the pivot value should be inserted.
